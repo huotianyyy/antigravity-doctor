@@ -4,8 +4,53 @@ from __future__ import annotations
 
 import html
 from datetime import datetime
+from typing import Any
 
-from .checks import CheckResult
+from .checks import CheckResult, format_bytes
+
+
+def _render_disk_breakdown(metrics: dict[str, Any]) -> str:
+    items = metrics.get("disk_breakdown") or []
+    if not items:
+        return ""
+
+    rows: list[str] = []
+    for item in items:
+        name = html.escape(str(item.get("name", "")))
+        formatted = html.escape(str(item.get("formatted", "")))
+        pct = float(item.get("share_pct", 0.0))
+        width = max(1.5, min(100.0, pct)) if pct > 0 else 0.0
+        rows.append(
+            f"""
+            <div class="bar-row">
+              <div class="bar-label">
+                <span class="dir-name"><code>{name}/</code></span>
+                <span class="dir-stat">{formatted} <b>({pct:.1f}%)</b></span>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill" style="width:{width:.1f}%"></div>
+              </div>
+            </div>
+            """
+        )
+
+    orphan_count = int(metrics.get("orphan_tmp_count", 0) or 0)
+    orphan_bytes = int(metrics.get("orphan_tmp_bytes", 0) or 0)
+    orphan_html = ""
+    if orphan_count > 0:
+        orphan_html = (
+            f"<div class='orphan-box'>Orphan state <code>*.tmp</code> files detected: "
+            f"<b>{orphan_count}</b> ({html.escape(format_bytes(orphan_bytes))}) — "
+            f"preview safe cleanup with <code>antigravity-doctor --prune-tmp --dry-run</code></div>"
+        )
+
+    return f"""
+    <div class="disk-chart">
+      <div class="chart-title">Top-Level Subdirectory Disk Breakdown (Top {len(items)})</div>
+      {''.join(rows)}
+      {orphan_html}
+    </div>
+    """
 
 
 def render_html_report(results: list[CheckResult]) -> str:
@@ -16,7 +61,9 @@ def render_html_report(results: list[CheckResult]) -> str:
 
     cards = []
     for r in results:
-        detail_html = "".join(f"<li><code>{html.escape(d)}</code></li>" for d in r.details)
+        chart_html = _render_disk_breakdown(r.metrics) if r.metrics else ""
+        filtered_details = [d for d in r.details if not (chart_html and d.startswith("Disk breakdown:"))]
+        detail_html = "".join(f"<li><code>{html.escape(d)}</code></li>" for d in filtered_details)
         rec_html = (
             f"<div class='rec'><b>Recommendation:</b> {html.escape(r.recommendation)}</div>"
             if r.recommendation
@@ -30,6 +77,7 @@ def render_html_report(results: list[CheckResult]) -> str:
                 <span class="badge {r.status}">{r.status.upper()}</span>
               </div>
               <p>{html.escape(r.summary)}</p>
+              {chart_html}
               {'<ul>' + detail_html + '</ul>' if detail_html else ''}
               {rec_html}
             </article>
@@ -44,7 +92,7 @@ def render_html_report(results: list[CheckResult]) -> str:
 <title>Antigravity Doctor Report</title>
 <style>
   body {{ background:#090d16; color:#e2e8f0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; margin:0; padding:32px 20px; }}
-  .wrap {{ max-width:920px; margin:0 auto; }}
+  .wrap {{ max-width:940px; margin:0 auto; }}
   h1 {{ margin:0 0 8px; font-size:1.7rem; }}
   .meta {{ color:#94a3b8; font-size:0.9rem; margin-bottom:24px; }}
   .summary {{ display:flex; gap:12px; margin-bottom:24px; flex-wrap:wrap; }}
@@ -62,7 +110,18 @@ def render_html_report(results: list[CheckResult]) -> str:
   p {{ margin:0 0 10px; color:#cbd5e1; }}
   ul {{ margin:8px 0 0 18px; padding:0; color:#94a3b8; font-size:0.86rem; }}
   li {{ margin-bottom:4px; }}
+  code {{ background:#0f172a; padding:2px 6px; border-radius:4px; font-family:Consolas,monospace; }}
   .rec {{ margin-top:12px; padding:10px 12px; background:#0f172a; border-radius:8px; font-size:0.86rem; color:#7dd3fc; }}
+  .disk-chart {{ margin:14px 0; padding:14px; background:#0b1220; border:1px solid #1e293b; border-radius:10px; }}
+  .chart-title {{ font-size:0.86rem; font-weight:600; color:#7dd3fc; margin-bottom:10px; }}
+  .bar-row {{ margin-bottom:9px; }}
+  .bar-row:last-of-type {{ margin-bottom:0; }}
+  .bar-label {{ display:flex; justify-content:space-between; font-size:0.82rem; color:#cbd5e1; margin-bottom:4px; }}
+  .dir-stat {{ color:#94a3b8; font-family:monospace; }}
+  .dir-stat b {{ color:#e2e8f0; }}
+  .bar-track {{ height:8px; background:#1e293b; border-radius:999px; overflow:hidden; }}
+  .bar-fill {{ height:100%; background:linear-gradient(90deg, #38bdf8, #818cf8); border-radius:999px; }}
+  .orphan-box {{ margin-top:12px; padding:8px 10px; background:rgba(251,191,36,.08); border:1px solid rgba(251,191,36,.25); border-radius:8px; font-size:0.82rem; color:#fde68a; }}
 </style>
 </head>
 <body>
