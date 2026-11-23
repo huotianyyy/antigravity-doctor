@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "antigravity-doctor"
-version = "0.1.0"
+version = "0.2.0"
 description = "Zero-dependency diagnostics, cache analyzer, and skill/MCP security auditor for Google Antigravity IDE & CLI."
 readme = "README.md"
 license = { file = "LICENSE" }
