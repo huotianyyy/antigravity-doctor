@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "antigravity-doctor"
+version = "0.1.0"
+description = "Zero-dependency diagnostics, cache analyzer, and skill/MCP security auditor for Google Antigravity IDE & CLI."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [{ name = "Harry" }]
+keywords = ["antigravity", "google-antigravity", "mcp", "ai-agents", "diagnostics", "cli"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+antigravity-doctor = "antigravity_doctor.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
