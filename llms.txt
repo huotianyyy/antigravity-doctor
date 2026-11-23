@@ -1,0 +1,3 @@
+# antigravity-doctor
+
+> Zero-dependency diagnostic CLI & standalone HTML reporter for Google Antigravity IDE and CLI (`agy`). Detects brain/cache storage bloat, audits installed SKILL.md files for indirect prompt injection or leaked secrets, and checks API/GitHub reachability.
